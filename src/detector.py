@@ -4,18 +4,53 @@ Simple, fast, and no external dependencies!
 """
 
 import cv2
+import os
 
 
 class FaceDetector:
     """Simple face detection using OpenCV."""
     
     def __init__(self):
-        # Load pre-trained face detector
-        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-        self.face_cascade = cv2.CascadeClassifier(cascade_path)
+        # Try multiple possible paths for the cascade file
+        possible_paths = [
+            # Standard OpenCV path
+            cv2.data.haarcascades + 'haarcascade_frontalface_default.xml',
+            # Alternative path
+            os.path.join(cv2.__path__[0], 'data', 'haarcascade_frontalface_default.xml'),
+            # Current directory
+            'haarcascade_frontalface_default.xml',
+        ]
         
-        if self.face_cascade.empty():
+        self.face_cascade = None
+        
+        for path in possible_paths:
+            if os.path.exists(path):
+                print(f"📁 Found cascade at: {path}")
+                self.face_cascade = cv2.CascadeClassifier(path)
+                break
+        
+        if self.face_cascade is None or self.face_cascade.empty():
+            # If still not found, download it
+            print("⬇️ Downloading face cascade file...")
+            self._download_cascade()
+        
+        if self.face_cascade is None or self.face_cascade.empty():
             raise RuntimeError("Could not load face cascade classifier")
+
+    def _download_cascade(self):
+        """Download the Haar cascade file if not found."""
+        import urllib.request
+        
+        url = "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_default.xml"
+        local_path = "haarcascade_frontalface_default.xml"
+        
+        try:
+            urllib.request.urlretrieve(url, local_path)
+            print(f"✅ Cascade file downloaded: {local_path}")
+            self.face_cascade = cv2.CascadeClassifier(local_path)
+        except Exception as e:
+            print(f"❌ Could not download cascade: {e}")
+            raise
 
     def detect(self, frame):
         """
