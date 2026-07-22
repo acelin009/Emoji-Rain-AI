@@ -1,61 +1,33 @@
 """
-Main Application Entry Point
+Main Application - Using OpenCV Face Detection
 """
 
 import cv2
 import sys
-import time
 import random
 import numpy as np
 
 from src.camera import Camera
-from src.detector import FaceDetector
-from src.utils import draw_emotion_bar, draw_emotion_label, get_face_center
-from src.config import (
-    WINDOW_NAME,
-    QUIT_KEY,
-    EMOTION_COLORS,
-    MIN_FACE_SIZE,
-    SHOW_EMOTION_BAR,
-)
-
-# Try to import emotion model (optional)
-try:
-    from src.emotion_model import EmotionRecognizer
-    EMOTION_AVAILABLE = True
-    print("✅ Emotion recognition module loaded")
-except ImportError as e:
-    print(f"⚠️ Emotion recognition not available: {e}")
-    print("   Running in face detection only mode")
-    EMOTION_AVAILABLE = False
+from src.detector_cv import FaceDetector  # Using OpenCV detector
+from src.config import WINDOW_NAME, QUIT_KEY, EMOTION_COLORS, SHOW_EMOTION_BAR
 
 
 def main():
-    """Main application loop."""
+    """Main application loop with face detection."""
     camera = None
     detector = None
-    emotion_recognizer = None
     
     try:
         print("📷 Starting webcam...")
         camera = Camera()
         print("✅ Webcam started")
         
-        print("👤 Initializing face detector...")
+        print("👤 Initializing face detector (OpenCV)...")
         detector = FaceDetector()
         print("✅ Face detector ready")
         
-        # Initialize emotion recognizer if available
-        if EMOTION_AVAILABLE:
-            try:
-                print("🎭 Loading emotion recognition model...")
-                emotion_recognizer = EmotionRecognizer(load_pretrained=False)
-                print("✅ Emotion recognizer initialized")
-            except Exception as e:
-                print(f"⚠️ Failed to initialize emotion model: {e}")
-                emotion_recognizer = None
-        
-        print("\nPress 'Q' to quit")
+        print("\n🎭 Press 'Q' to quit")
+        print("   Face detection running with random emotions for demo")
         
         while True:
             success, frame, fps = camera.read()
@@ -65,56 +37,43 @@ def main():
                 break
             
             # Detect faces
-            results = detector.detect(frame)
+            faces = detector.detect(frame)
             
-            # Process each face
-            if results.detections:
-                for detection in results.detections:
-                    # Get face coordinates
-                    bbox = detection.location_data.relative_bounding_box
-                    height, width, _ = frame.shape
+            # Draw faces
+            frame = detector.draw(frame, faces)
+            
+            # Process each face for emotion (random for demo)
+            if len(faces) > 0:
+                for (x, y, w, h) in faces:
+                    # Random emotion for demo
+                    random_index = random.randint(0, len(EMOTION_COLORS) - 1)
+                    emotion = list(EMOTION_COLORS.keys())[random_index]
+                    confidence = random.uniform(0.6, 0.95)
                     
-                    # Convert to pixel coordinates
-                    x = int(bbox.xmin * width)
-                    y = int(bbox.ymin * height)
-                    w = int(bbox.width * width)
-                    h = int(bbox.height * height)
+                    # Get color for this emotion
+                    color = EMOTION_COLORS.get(emotion, (0, 255, 255))
                     
-                    # Make sure face is large enough
-                    if w > MIN_FACE_SIZE and h > MIN_FACE_SIZE:
-                        # Draw bounding box
-                        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+                    # Draw emotion label above face
+                    label = f"{emotion}: {confidence:.2f}"
+                    cv2.putText(
+                        frame,
+                        label,
+                        (x, y - 30),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.6,
+                        color,
+                        2
+                    )
+                    
+                    # Draw emotion bar chart (if enabled)
+                    if SHOW_EMOTION_BAR:
+                        # Create random predictions
+                        predictions = np.random.dirichlet(np.ones(7))
                         
-                        # Try emotion recognition if available
-                        if emotion_recognizer is not None:
-                            try:
-                                face = frame[y:y+h, x:x+w]
-                                # For demonstration with random emotions (since model isn't trained)
-                                random_index = random.randint(0, 6)
-                                emotion = list(EMOTION_COLORS.keys())[random_index]
-                                confidence = random.uniform(0.5, 0.95)
-                                predictions = np.random.dirichlet(np.ones(7))
-                                
-                                # Draw emotion label
-                                label = f"{emotion}: {confidence:.2f}"
-                                color = EMOTION_COLORS.get(emotion, (0, 255, 0))
-                                cv2.putText(
-                                    frame,
-                                    label,
-                                    (x, y - 10),
-                                    cv2.FONT_HERSHEY_SIMPLEX,
-                                    0.6,
-                                    color,
-                                    2
-                                )
-                                
-                                # Draw emotion bar
-                                if SHOW_EMOTION_BAR:
-                                    bar_x = width - 220
-                                    bar_y = height - 200
-                                    draw_emotion_bar(frame, predictions, bar_x, bar_y)
-                            except Exception as e:
-                                print(f"⚠️ Emotion prediction error: {e}")
+                        # Draw bar chart on the right side
+                        bar_x = frame.shape[1] - 220
+                        bar_y = frame.shape[0] - 200
+                        draw_emotion_bar(frame, predictions, bar_x, bar_y)
             
             # Display FPS
             cv2.putText(
@@ -145,6 +104,57 @@ def main():
         if camera is not None:
             camera.release()
             print("✅ Camera released")
+
+
+def draw_emotion_bar(frame, predictions, x, y, width=200, height=150):
+    """
+    Draw a bar chart showing emotion probabilities.
+    """
+    if predictions is None:
+        return frame
+    
+    # Background
+    overlay = frame.copy()
+    cv2.rectangle(overlay, (x, y), (x + width, y + height), (0, 0, 0), -1)
+    cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
+    
+    # Emotion labels (same as in config)
+    emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
+    
+    # Bar settings
+    bar_width = width - 20
+    bar_height = height // len(emotions) - 5
+    start_x = x + 10
+    
+    for i, (label, prob) in enumerate(zip(emotions, predictions)):
+        bar_y = y + 10 + i * (bar_height + 5)
+        bar_length = int(prob * bar_width)
+        
+        # Get color for this emotion
+        color = EMOTION_COLORS.get(label, (255, 255, 255))
+        
+        # Draw bar
+        cv2.rectangle(
+            frame,
+            (start_x, bar_y),
+            (start_x + bar_length, bar_y + bar_height),
+            color,
+            -1
+        )
+        
+        # Draw label
+        label_text = f"{label}: {prob:.2f}"
+        cv2.putText(
+            frame,
+            label_text,
+            (start_x + 5, bar_y + bar_height - 3),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.35,
+            (255, 255, 255),
+            1
+        )
+    
+    return frame
 
 
 if __name__ == "__main__":

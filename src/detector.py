@@ -1,122 +1,72 @@
 """
-Face Detection Module
-
-Uses Google's MediaPipe Face Detection
-to detect faces in real time.
+Face Detection using OpenCV Haar Cascade
+Simple, fast, and no external dependencies!
 """
 
 import cv2
-import mediapipe as mp
-
-from src.config import FACE_DETECTION_CONFIDENCE
 
 
 class FaceDetector:
-    """
-    Face detection using MediaPipe.
-    Handles detection and visualization of faces.
-    """
-
+    """Simple face detection using OpenCV."""
+    
     def __init__(self):
-        """
-        Initialize MediaPipe Face Detection.
-        """
-        self.mp_face = mp.solutions.face_detection
+        # Load pre-trained face detector
+        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        self.face_cascade = cv2.CascadeClassifier(cascade_path)
         
-        self.detector = self.mp_face.FaceDetection(
-            model_selection=0,  # 0 = short range (2m), 1 = long range (5m)
-            min_detection_confidence=FACE_DETECTION_CONFIDENCE
-        )
+        if self.face_cascade.empty():
+            raise RuntimeError("Could not load face cascade classifier")
 
     def detect(self, frame):
         """
-        Detect faces in the frame.
-        
-        Parameters:
-        - frame: BGR image from OpenCV
-        
-        Returns:
-        - results: MediaPipe FaceDetection results object
+        Detect faces in frame.
+        Returns list of face rectangles.
         """
-        # Convert BGR to RGB (MediaPipe expects RGB)
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # Convert to grayscale (required for Haar cascade)
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        # Process the frame
-        results = self.detector.process(rgb)
+        # Detect faces
+        faces = self.face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(50, 50)
+        )
         
-        return results
+        return faces
 
-    def draw(self, frame, results):
+    def draw(self, frame, faces):
         """
-        Draw bounding boxes and labels on detected faces.
-        
-        Parameters:
-        - frame: Image to draw on
-        - results: MediaPipe detection results
-        
-        Returns:
-        - frame: Image with drawings
+        Draw bounding boxes around faces.
         """
-        height, width, _ = frame.shape
+        for (x, y, w, h) in faces:
+            # Draw green rectangle
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            
+            # Draw center point
+            center_x = x + w // 2
+            center_y = y + h // 2
+            cv2.circle(frame, (center_x, center_y), 5, (0, 0, 255), -1)
+            
+            # Add label
+            cv2.putText(
+                frame,
+                "Face Detected",
+                (x, y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 255, 0),
+                1
+            )
         
-        face_count = 0
-        
-        if results.detections:
-            for detection in results.detections:
-                face_count += 1
-                
-                # Get bounding box coordinates (relative)
-                bbox = detection.location_data.relative_bounding_box
-                
-                # Convert to pixel coordinates
-                x = int(bbox.xmin * width)
-                y = int(bbox.ymin * height)
-                w = int(bbox.width * width)
-                h = int(bbox.height * height)
-                
-                # Draw bounding box
-                cv2.rectangle(
-                    frame,
-                    (x, y),
-                    (x + w, y + h),
-                    (0, 255, 0),  # Green
-                    2
-                )
-                
-                # Get confidence score
-                confidence = detection.score[0]
-                
-                # Draw confidence above box
-                cv2.putText(
-                    frame,
-                    f"{confidence:.2f}",
-                    (x, y - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.6,
-                    (255, 255, 255),
-                    2
-                )
-                
-                # Draw center point
-                center_x = x + w // 2
-                center_y = y + h // 2
-                
-                cv2.circle(
-                    frame,
-                    (center_x, center_y),
-                    5,
-                    (0, 0, 255),  # Red
-                    -1
-                )
-        
-        # Display face count
+        # Show face count
         cv2.putText(
             frame,
-            f"Faces: {face_count}",
+            f"Faces: {len(faces)}",
             (20, 80),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
-            (0, 255, 255),  # Yellow
+            (0, 255, 255),
             2
         )
         
