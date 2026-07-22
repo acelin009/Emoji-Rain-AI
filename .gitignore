@@ -1,0 +1,41 @@
+# Virtual Environment
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# VS Code
+.vscode/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Logs
+*.log
+
+# Testing
+.pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Environment Variables
+.env
+
+# Temporary
+*.tmp
