@@ -13,31 +13,11 @@ from src.emoji_mapper import EmotionRecognizer
 from src.config import WINDOW_NAME, QUIT_KEY, EMOTION_COLORS, SHOW_EMOTION_BAR
 
 
-class EmotionHistory:
-    """Smooth emotion transitions over time."""
-    
-    def __init__(self, max_length=10):
-        self.history = deque(maxlen=max_length)
-        self.current_emotion = 'Neutral'
-    
-    def update(self, emotion):
-        if emotion:
-            self.history.append(emotion)
-        
-        # Get most common emotion in history
-        if len(self.history) > 0:
-            from collections import Counter
-            self.current_emotion = Counter(self.history).most_common(1)[0][0]
-        
-        return self.current_emotion
-
-
 def main():
     """Main application loop with real emotion recognition."""
     camera = None
     detector = None
     emotion_recognizer = None
-    emotion_history = None
     
     try:
         print("📷 Starting webcam...")
@@ -50,15 +30,15 @@ def main():
         
         print("🎭 Initializing emotion recognizer...")
         emotion_recognizer = EmotionRecognizer()
-        emotion_history = EmotionHistory(max_length=8)
         print("✅ Emotion recognizer ready")
         
         print("\n🎯 REAL EMOTION RECOGNITION ACTIVE!")
-        print("   Try different expressions and watch the emotion change")
+        print("   Try different expressions: 😊😢😠😲")
         print("   Press 'Q' to quit\n")
         
-        frame_count = 0
-        face_crop = None
+        # For emotion smoothing
+        emotion_history = deque(maxlen=10)
+        current_emotion = 'Neutral'
         
         while True:
             success, frame, fps = camera.read()
@@ -75,23 +55,26 @@ def main():
             
             # Process first face for emotion
             if len(faces) > 0:
-                (x, y, w, h) = faces[0]  # Use first face
+                (x, y, w, h) = faces[0]
                 
-                # Crop the face
+                # Crop face
                 face_crop = frame[y:y+h, x:x+w]
                 
-                # Get emotion prediction
-                emotion, confidence, all_emotions = emotion_recognizer.get_smoothed_emotion(face_crop)
+                # Get emotion
+                emotion, confidence, all_emotions = emotion_recognizer.get_emotion_with_smoothing(face_crop)
                 
                 if emotion:
                     # Update history for smoothing
-                    smoothed_emotion = emotion_history.update(emotion)
+                    emotion_history.append(emotion)
+                    if len(emotion_history) > 0:
+                        from collections import Counter
+                        current_emotion = Counter(emotion_history).most_common(1)[0][0]
                     
-                    # Get color for emotion
-                    color = EMOTION_COLORS.get(smoothed_emotion, (0, 255, 255))
+                    # Get color
+                    color = EMOTION_COLORS.get(current_emotion, (0, 255, 255))
                     
-                    # Draw emotion label above face
-                    label = f"{smoothed_emotion}: {confidence:.2f}"
+                    # Draw emotion label
+                    label = f"{current_emotion}: {confidence:.2f}" if confidence else current_emotion
                     cv2.putText(
                         frame,
                         label,
@@ -102,8 +85,8 @@ def main():
                         2
                     )
                     
-                    # Draw emotion icon
-                    emotion_icons = {
+                    # Draw emoji icon
+                    emoji_map = {
                         'Happy': '😊',
                         'Sad': '😢',
                         'Angry': '😠',
@@ -112,7 +95,7 @@ def main():
                         'Disgust': '🤢',
                         'Neutral': '😐'
                     }
-                    icon = emotion_icons.get(smoothed_emotion, '😐')
+                    icon = emoji_map.get(current_emotion, '😐')
                     cv2.putText(
                         frame,
                         icon,
@@ -125,46 +108,25 @@ def main():
                     
                     # Draw emotion bar chart
                     if SHOW_EMOTION_BAR and all_emotions:
-                        # Convert DeepFace dict to array
+                        # Convert to array
                         predictions = np.array([all_emotions.get(label, 0) for label in EMOTION_COLORS.keys()])
-                        predictions = predictions / 100.0  # Normalize
+                        # Normalize
+                        if predictions.sum() > 0:
+                            predictions = predictions / predictions.sum()
                         
                         bar_x = frame.shape[1] - 220
                         bar_y = frame.shape[0] - 200
                         draw_emotion_bar(frame, predictions, bar_x, bar_y)
-                    
-                    # Display emotion history
-                    history_text = f"History: {', '.join(list(emotion_history.history)[-5:])}"
-                    cv2.putText(
-                        frame,
-                        history_text,
-                        (20, 120),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5,
-                        (200, 200, 200),
-                        1
-                    )
             
             # Display FPS and info
             cv2.putText(
                 frame,
-                f"FPS: {fps} | Press 'Q' to quit",
+                f"FPS: {fps} | Emotion: {current_emotion}",
                 (20, 40),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.7,
                 (0, 255, 0),
                 2
-            )
-            
-            # Instructions
-            cv2.putText(
-                frame,
-                "Try different expressions! 😊😢😠😲",
-                (20, frame.shape[0] - 20),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (255, 255, 255),
-                1
             )
             
             # Show frame
