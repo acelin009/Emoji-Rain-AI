@@ -1,135 +1,116 @@
 """
-Emoji Rendering
-
-cv2.putText() only understands the built-in Hershey fonts, which are
-plain ASCII line-art — they cannot draw Unicode emoji at all. That is
-why emoji were showing up as "?" / "????" in the app.
-
-This module renders real color emoji glyphs with Pillow (using the
-OS's built-in color-emoji font) and composites them onto an OpenCV
-(BGR, numpy) frame with proper alpha blending. If no emoji font can be
-found on the system, it falls back to drawing a plain colored circle
-so the app still runs instead of crashing.
+Emoji Rendering Module
+Renders real emoji glyphs using PIL for proper Unicode support.
 """
-
-import os
-import platform
 
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+import os
 
 from src.config import FONT_PATH
 
 
-def _find_emoji_font():
-    """Locate a color-emoji font on the current OS."""
+def get_emoji_font(size):
+    """
+    Get a font that supports emoji rendering.
+    
+    Tries multiple approaches:
+    1. User-specified font path
+    2. System emoji fonts
+    3. Fallback to default font
+    """
+    # Try user-specified font first
     if FONT_PATH and os.path.exists(FONT_PATH):
-        return FONT_PATH
-
-    system = platform.system()
-    if system == "Windows":
-        candidates = [
-            os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts", "seguiemj.ttf"),
-        ]
-    elif system == "Darwin":
-        candidates = [
-            "/System/Library/Fonts/Apple Color Emoji.ttc",
-        ]
-    else:
-        candidates = [
-            "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
-            "/usr/share/fonts/noto/NotoColorEmoji.ttf",
-            "/usr/local/share/fonts/NotoColorEmoji.ttf",
-        ]
-
-    for path in candidates:
-        if os.path.exists(path):
-            return path
-    return None
-
-
-EMOJI_FONT_PATH = _find_emoji_font()
-
-_FONT_CACHE = {}
-_GLYPH_CACHE = {}
-
-
-def _get_font(size):
-    if size not in _FONT_CACHE:
-        if EMOJI_FONT_PATH is None:
-            _FONT_CACHE[size] = None
-        else:
+        try:
+            return ImageFont.truetype(FONT_PATH, size)
+        except:
+            pass
+    
+    # Try common emoji fonts by platform
+    emoji_fonts = [
+        # Windows
+        "C:/Windows/Fonts/SegoeUIEmoji.ttf",
+        "C:/Windows/Fonts/seguiemj.ttf",
+        # macOS
+        "/System/Library/Fonts/Apple Color Emoji.ttc",
+        # Linux
+        "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
+        "/usr/share/fonts/google-noto-emoji/NotoColorEmoji.ttf",
+    ]
+    
+    for font_path in emoji_fonts:
+        if os.path.exists(font_path):
             try:
-                _FONT_CACHE[size] = ImageFont.truetype(EMOJI_FONT_PATH, size)
-            except OSError:
-                _FONT_CACHE[size] = None
-    return _FONT_CACHE[size]
-
-
-def _render_glyph(emoji, size):
-    """Render one emoji to an RGBA numpy array, cached by (emoji, size)."""
-    font = _get_font(size)
-    if font is None:
+                return ImageFont.truetype(font_path, size)
+            except:
+                continue
+    
+    # Fallback: use default font (won't show emoji but won't crash)
+    try:
+        return ImageFont.load_default()
+    except:
         return None
 
-    pad = size // 2
-    canvas = size + pad * 2
-    img = Image.new("RGBA", (canvas, canvas), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    try:
-        draw.text((pad, pad), emoji, font=font, embedded_color=True)
-    except TypeError:
-        # Older Pillow versions don't support embedded_color
-        draw.text((pad, pad), emoji, font=font, fill=(255, 255, 255, 255))
-    return np.array(img)
 
-
-def get_glyph(emoji, size):
-    key = (emoji, int(size))
-    if key not in _GLYPH_CACHE:
-        _GLYPH_CACHE[key] = _render_glyph(emoji, int(size))
-    return _GLYPH_CACHE[key]
-
-
-def emoji_font_available():
-    return EMOJI_FONT_PATH is not None
-
-
-def draw_emoji(frame, emoji, x, y, size=40, alpha=1.0):
+def draw_emoji(frame, emoji_char, x, y, size=40, alpha=1.0):
     """
-    Draw a single emoji glyph centered at (x, y) on a BGR OpenCV frame.
-    Falls back to a colored circle if no emoji font is available on
-    this system.
+    Draw a single emoji on an OpenCV frame using PIL.
+    
+    Parameters:
+    - frame: OpenCV BGR image
+    - emoji_char: Single emoji character (e.g., '😊')
+    - x, y: Center position for the emoji
+    - size: Font size in pixels
+    - alpha: Opacity (0.0 to 1.0)
+    
+    Returns:
+    - frame: Updated OpenCV image
     """
-    glyph = get_glyph(emoji, size)
-
-    if glyph is None:
-        cv2.circle(frame, (int(x), int(y)), max(4, size // 2), (0, 215, 255), -1)
+    if alpha <= 0 or emoji_char is None:
         return frame
-
-    h, w = glyph.shape[:2]
-    top_left_x = int(x - w // 2)
-    top_left_y = int(y - h // 2)
-
-    frame_h, frame_w = frame.shape[:2]
-
-    x1, y1 = max(0, top_left_x), max(0, top_left_y)
-    x2, y2 = min(frame_w, top_left_x + w), min(frame_h, top_left_y + h)
-    if x1 >= x2 or y1 >= y2:
-        return frame  # fully off-screen, nothing to draw
-
-    px1, py1 = x1 - top_left_x, y1 - top_left_y
-    px2, py2 = px1 + (x2 - x1), py1 + (y2 - y1)
-
-    roi = frame[y1:y2, x1:x2].astype(np.float32)
-    patch_rgb = glyph[py1:py2, px1:px2, :3][:, :, ::-1].astype(np.float32)  # RGB -> BGR
-    patch_a = glyph[py1:py2, px1:px2, 3:4].astype(np.float32) / 255.0
-
+    
+    # Convert OpenCV BGR to PIL RGB
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    pil_image = Image.fromarray(rgb_frame)
+    
+    # Create drawing context
+    draw = ImageDraw.Draw(pil_image)
+    
+    # Get font
+    font = get_emoji_font(size)
+    if font is None:
+        # Fallback: just draw text with cv2
+        cv2.putText(frame, emoji_char, (int(x - size/2), int(y + size/3)),
+                   cv2.FONT_HERSHEY_SIMPLEX, size/30, (255, 255, 255), 2)
+        return frame
+    
+    # Calculate text position (centered)
+    try:
+        # Get text bounding box
+        bbox = draw.textbbox((0, 0), emoji_char, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        
+        # Position text (centered at x, y)
+        text_x = int(x - text_width / 2)
+        text_y = int(y - text_height / 2)
+    except:
+        # Fallback if textbbox fails
+        text_x = int(x - size/2)
+        text_y = int(y - size/2)
+    
+    # Draw emoji with alpha
     if alpha < 1.0:
-        patch_a = patch_a * alpha
-
-    blended = roi * (1.0 - patch_a) + patch_rgb * patch_a
-    frame[y1:y2, x1:x2] = blended.astype(np.uint8)
-
+        # Create temporary image for alpha blending
+        temp_img = Image.new('RGBA', pil_image.size, (0, 0, 0, 0))
+        temp_draw = ImageDraw.Draw(temp_img)
+        temp_draw.text((text_x, text_y), emoji_char, font=font, fill=(255, 255, 255, int(alpha * 255)))
+        pil_image = Image.alpha_composite(pil_image.convert('RGBA'), temp_img).convert('RGB')
+    else:
+        draw.text((text_x, text_y), emoji_char, font=font, fill=(255, 255, 255))
+    
+    # Convert back to OpenCV BGR
+    frame = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+    
     return frame

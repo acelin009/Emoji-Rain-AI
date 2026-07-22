@@ -8,20 +8,13 @@ import numpy as np
 import time
 from collections import Counter
 
-from src.config import EMOTION_UPDATE_INTERVAL, SMOOTHING_WINDOW
+from src.config import EMOTION_UPDATE_INTERVAL, SMOOTHING_WINDOW, EMOTION_LABELS
 
 
 class EmotionRecognizer:
     """
     Simple rule-based emotion recognition.
     Uses facial feature ratios from OpenCV.
-
-    NOTE: this is a lightweight heuristic (no neural network), so it
-    will never be as accurate as a trained model - but it needs no
-    extra downloads and runs in real time on any machine. If you want
-    materially better accuracy later, swapping this class for a small
-    CNN (e.g. via the `fer` or `deepface` package) is the natural next
-    step, while keeping the same predict_emotion() interface.
     """
 
     def __init__(self):
@@ -53,7 +46,7 @@ class EmotionRecognizer:
         if self.smile_cascade is None:
             print("   ⚠️ Smile cascade not found - using fallback detection")
 
-        self.emotion_labels = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
+        self.emotion_labels = EMOTION_LABELS
         self.last_emotion = 'Neutral'
         self.last_confidence = 0.5
         self.last_update_time = 0

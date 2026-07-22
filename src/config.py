@@ -60,6 +60,4 @@ SHOW_FACE_COUNT = True
 
 # ===== Font Settings =====
 # Path to a color-emoji font (.ttf/.ttc). Leave as None to auto-detect
-# the OS's built-in emoji font (Segoe UI Emoji on Windows, Apple Color
-# Emoji on macOS, Noto Color Emoji on most Linux distros).
 FONT_PATH = None
