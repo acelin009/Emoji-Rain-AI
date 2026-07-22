@@ -8,7 +8,7 @@ import random
 import numpy as np
 
 from src.camera import Camera
-from src.detector_cv import FaceDetector  # Using OpenCV detector
+from src.detector import FaceDetector  # Using OpenCV detector
 from src.config import WINDOW_NAME, QUIT_KEY, EMOTION_COLORS, SHOW_EMOTION_BAR
 
 
