@@ -20,6 +20,10 @@ MIN_FACE_SIZE = 50
 EMOTION_UPDATE_INTERVAL = 0.25  # Seconds between emotion predictions
 SMOOTHING_WINDOW = 7  # Number of frames to smooth over
 
+# Canonical ordering used everywhere a list (rather than a dict) of
+# emotions is needed, e.g. bar charts.
+EMOTION_LABELS = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
+
 # ===== Emotion Colors (BGR format) =====
 EMOTION_COLORS = {
     'Angry': (0, 0, 255),      # Red
@@ -55,4 +59,7 @@ SHOW_FPS = True
 SHOW_FACE_COUNT = True
 
 # ===== Font Settings =====
-FONT_PATH = None  # Will use default if None
+# Path to a color-emoji font (.ttf/.ttc). Leave as None to auto-detect
+# the OS's built-in emoji font (Segoe UI Emoji on Windows, Apple Color
+# Emoji on macOS, Noto Color Emoji on most Linux distros).
+FONT_PATH = None

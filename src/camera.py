@@ -13,8 +13,6 @@ from src.config import (
     CAMERA_INDEX,
     FRAME_WIDTH,
     FRAME_HEIGHT,
-    WINDOW_NAME,
-    QUIT_KEY,
 )
 
 
@@ -55,10 +53,10 @@ class Camera:
         """
         success, frame = self.cap.read()
 
-        # Calculate FPS
         if success:
             current_time = time.time()
-            self.fps = 1 / (current_time - self.previous_time)
+            elapsed = current_time - self.previous_time
+            self.fps = 1 / elapsed if elapsed > 0 else self.fps
             self.previous_time = current_time
 
         return success, frame, int(self.fps)
@@ -68,4 +66,4 @@ class Camera:
         Release webcam resources.
         """
         self.cap.release()
-        cv2.destroyAllWindows() 
+        cv2.destroyAllWindows()
