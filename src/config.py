@@ -1,44 +1,58 @@
 """
 Project Configuration
+All settings in one place.
 """
 
-# Camera Settings
+# ===== Camera Settings =====
 CAMERA_INDEX = 0
 FRAME_WIDTH = 1280
 FRAME_HEIGHT = 720
 
-# Window Settings
+# ===== Window Settings =====
 WINDOW_NAME = "Emoji Rain AI"
-
-# Keyboard
 QUIT_KEY = ord("q")
 
-# Face Detection
+# ===== Face Detection =====
 FACE_DETECTION_CONFIDENCE = 0.6
-BOX_COLOR = (0, 255, 0)
-BOX_THICKNESS = 2
-TEXT_COLOR = (255, 255, 255)
-CENTER_COLOR = (0, 0, 255)
+MIN_FACE_SIZE = 50
 
-# Emotion Recognition
-EMOTION_LABELS = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
+# ===== Emotion Recognition =====
+EMOTION_UPDATE_INTERVAL = 0.25  # Seconds between emotion predictions
+SMOOTHING_WINDOW = 7  # Number of frames to smooth over
 
-# Color mapping for each emotion (BGR format)
+# ===== Emotion Colors (BGR format) =====
 EMOTION_COLORS = {
     'Angry': (0, 0, 255),      # Red
-    'Disgust': (0, 128, 128),   # Greenish-yellow
-    'Fear': (255, 0, 255),      # Magenta
-    'Happy': (0, 255, 255),     # Yellow
-    'Neutral': (255, 255, 255), # White
-    'Sad': (255, 0, 0),         # Blue
-    'Surprise': (0, 255, 0)     # Green
+    'Disgust': (0, 128, 128),  # Greenish-yellow
+    'Fear': (255, 0, 255),     # Magenta
+    'Happy': (0, 255, 255),    # Yellow
+    'Neutral': (255, 255, 255),# White
+    'Sad': (255, 0, 0),        # Blue
+    'Surprise': (0, 255, 0)    # Green
 }
 
-# Model Settings
-MODEL_PATH = "models/emotion_model.h5"
-MIN_FACE_SIZE = 50  # Minimum pixels for face to be recognized
-EMOTION_DISPLAY_DURATION = 30  # Frames to show emotion after detection
+# ===== Emoji Mapping =====
+EMOTION_TO_EMOJI = {
+    'Happy': ['😊', '😂', '🥰', '❤️', '✨', '🎉', '😍', '🥳'],
+    'Sad': ['😢', '😭', '💔', '🌧️', '😞', '😔'],
+    'Angry': ['😠', '😡', '💢', '🔥', '👿', '🤬'],
+    'Surprise': ['😲', '😮', '🤯', '🌟', '🎊', '💫'],
+    'Fear': ['😨', '😱', '💀', '👻', '😰'],
+    'Disgust': ['🤢', '🤮', '👎', '💩', '😖'],
+    'Neutral': ['😐', '😑', '🤔', '🙂', '😶']
+}
 
-# Visualization
+# ===== Emoji Engine =====
+MAX_PARTICLES = 300
+PARTICLE_SPEED = 3
+PARTICLE_SIZE = 40
+SPAWN_RATE = 5  # Emojis per second
+EMOJI_LIFETIME = 3.0  # Seconds before fading
+
+# ===== UI Settings =====
 SHOW_EMOTION_BAR = True
-SHOW_ALL_EMOTIONS = True
+SHOW_FPS = True
+SHOW_FACE_COUNT = True
+
+# ===== Font Settings =====
+FONT_PATH = None  # Will use default if None

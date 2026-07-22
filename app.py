@@ -1,28 +1,49 @@
 """
-Main Application - Real Emotion Recognition with DeepFace
+Emoji Rain AI - Main Application
+Real-time emotion recognition with emoji rain effect.
 """
 
 import cv2
 import sys
-import numpy as np
-from collections import deque
+import time
+import random
 
 from src.camera import Camera
 from src.detector import FaceDetector
-from src.emoji_mapper import EmotionRecognizer
-from src.config import WINDOW_NAME, QUIT_KEY, EMOTION_COLORS, SHOW_EMOTION_BAR
+from src.emotion import EmotionRecognizer
+from src.emoji_engine import EmojiEngine
+from src.ui import (
+    draw_emotion_bar,
+    draw_emotion_label,
+    draw_emoji_particles,
+    draw_info_overlay,
+    draw_bounding_box
+)
+from src.config import (
+    WINDOW_NAME,
+    QUIT_KEY,
+    EMOTION_COLORS,
+    SHOW_EMOTION_BAR,
+    MIN_FACE_SIZE
+)
 
 
 def main():
-    """Main application loop with real emotion recognition."""
+    """Main application loop."""
     camera = None
     detector = None
     emotion_recognizer = None
+    emoji_engine = None
     
     try:
-        print("📷 Starting webcam...")
+        # Initialize modules
+        print("=" * 50)
+        print("🎬 Emoji Rain AI - Starting...")
+        print("=" * 50)
+        
+        print("📷 Initializing camera...")
         camera = Camera()
-        print("✅ Webcam started")
+        print("✅ Camera ready")
         
         print("👤 Initializing face detector...")
         detector = FaceDetector()
@@ -32,113 +53,90 @@ def main():
         emotion_recognizer = EmotionRecognizer()
         print("✅ Emotion recognizer ready")
         
-        print("\n🎯 REAL EMOTION RECOGNITION ACTIVE!")
-        print("   Try different expressions: 😊😢😠😲")
-        print("   Press 'Q' to quit\n")
+        print("🎨 Initializing emoji engine...")
+        emoji_engine = EmojiEngine()
+        print("✅ Emoji engine ready")
         
-        # For emotion smoothing
-        emotion_history = deque(maxlen=10)
+        print("\n" + "=" * 50)
+        print("🎯 REAL-TIME EMOTION RECOGNITION + EMOJI RAIN")
+        print("   Try different expressions to trigger emojis!")
+        print("   Press 'Q' to quit")
+        print("=" * 50 + "\n")
+        
+        # State variables
         current_emotion = 'Neutral'
+        last_emotion_update = time.time()
+        emotion_update_interval = 0.25  # Update emotion every 250ms
         
         while True:
-            success, frame, fps = camera.read()
+            frame_start = time.time()
             
+            # Capture frame
+            success, frame, fps = camera.read()
             if not success:
                 print("⚠️ Failed to capture frame")
                 break
             
             # Detect faces
             faces = detector.detect(frame)
-            
-            # Draw faces
             frame = detector.draw(frame, faces)
             
-            # Process first face for emotion
+            # Process first face
             if len(faces) > 0:
-                (x, y, w, h) = faces[0]
+                x, y, w, h = faces[0]
                 
-                # Crop face
-                face_crop = frame[y:y+h, x:x+w]
+                # Ensure crop is within bounds
+                x = max(0, x)
+                y = max(0, y)
+                x2 = min(frame.shape[1], x + w)
+                y2 = min(frame.shape[0], y + h)
                 
-                # Get emotion
-                emotion, confidence, all_emotions = emotion_recognizer.get_emotion_with_smoothing(face_crop)
-                
-                if emotion:
-                    # Update history for smoothing
-                    emotion_history.append(emotion)
-                    if len(emotion_history) > 0:
-                        from collections import Counter
-                        current_emotion = Counter(emotion_history).most_common(1)[0][0]
+                if x2 > x and y2 > y and w > MIN_FACE_SIZE and h > MIN_FACE_SIZE:
+                    # Crop face
+                    face_crop = frame[y:y2, x:x2]
                     
-                    # Get color
-                    color = EMOTION_COLORS.get(current_emotion, (0, 255, 255))
+                    # Get emotion (with smoothing)
+                    emotion, confidence, all_emotions = emotion_recognizer.get_smoothed_emotion(face_crop)
+                    
+                    if emotion:
+                        current_emotion = emotion
+                        emoji_engine.set_emotion(emotion)
                     
                     # Draw emotion label
-                    label = f"{current_emotion}: {confidence:.2f}" if confidence else current_emotion
-                    cv2.putText(
-                        frame,
-                        label,
-                        (x, y - 30),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.8,
-                        color,
-                        2
-                    )
+                    if emotion and confidence:
+                        frame = draw_emotion_label(frame, emotion, confidence, x, y - 10)
                     
-                    # Draw emoji icon
-                    emoji_map = {
-                        'Happy': '😊',
-                        'Sad': '😢',
-                        'Angry': '😠',
-                        'Surprise': '😲',
-                        'Fear': '😨',
-                        'Disgust': '🤢',
-                        'Neutral': '😐'
-                    }
-                    icon = emoji_map.get(current_emotion, '😐')
-                    cv2.putText(
-                        frame,
-                        icon,
-                        (x + w + 10, y + 30),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1.5,
-                        color,
-                        2
-                    )
+                    # Draw bounding box with emotion color
+                    frame = draw_bounding_box(frame, x, y, w, h, current_emotion)
                     
                     # Draw emotion bar chart
                     if SHOW_EMOTION_BAR and all_emotions:
-                        # Convert to array
-                        predictions = np.array([all_emotions.get(label, 0) for label in EMOTION_COLORS.keys()])
-                        # Normalize
-                        if predictions.sum() > 0:
-                            predictions = predictions / predictions.sum()
-                        
                         bar_x = frame.shape[1] - 220
                         bar_y = frame.shape[0] - 200
-                        draw_emotion_bar(frame, predictions, bar_x, bar_y)
+                        frame = draw_emotion_bar(frame, all_emotions, bar_x, bar_y)
             
-            # Display FPS and info
-            cv2.putText(
-                frame,
-                f"FPS: {fps} | Emotion: {current_emotion}",
-                (20, 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (0, 255, 0),
-                2
-            )
+            # Update emoji engine
+            dt = 1.0 / max(fps, 1)
+            emoji_engine.update(dt, frame.shape[1], frame.shape[0])
+            
+            # Draw emoji particles
+            frame = draw_emoji_particles(frame, emoji_engine.get_particles())
+            
+            # Draw info overlay
+            face_count = len(faces)
+            particle_count = emoji_engine.get_particle_count()
+            frame = draw_info_overlay(frame, int(fps), face_count, current_emotion, particle_count)
             
             # Show frame
             cv2.imshow(WINDOW_NAME, frame)
             
             # Quit check
             if cv2.waitKey(1) & 0xFF == QUIT_KEY:
-                print("🛑 Closing application...")
+                print("\n🛑 Closing application...")
                 break
     
     except Exception as error:
-        print(f"❌ Error: {error}")
+        print(f"\n❌ Error: {error}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
@@ -147,50 +145,8 @@ def main():
         if camera is not None:
             camera.release()
             print("✅ Camera released")
-
-
-def draw_emotion_bar(frame, predictions, x, y, width=200, height=150):
-    """Draw a bar chart showing emotion probabilities."""
-    if predictions is None:
-        return frame
-    
-    # Background
-    overlay = frame.copy()
-    cv2.rectangle(overlay, (x, y), (x + width, y + height), (0, 0, 0), -1)
-    cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
-    
-    emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Neutral', 'Sad', 'Surprise']
-    
-    bar_width = width - 20
-    bar_height = height // len(emotions) - 5
-    start_x = x + 10
-    
-    for i, (label, prob) in enumerate(zip(emotions, predictions)):
-        bar_y = y + 10 + i * (bar_height + 5)
-        bar_length = int(prob * bar_width)
-        
-        color = EMOTION_COLORS.get(label, (255, 255, 255))
-        
-        cv2.rectangle(
-            frame,
-            (start_x, bar_y),
-            (start_x + bar_length, bar_y + bar_height),
-            color,
-            -1
-        )
-        
-        label_text = f"{label}: {prob:.2f}"
-        cv2.putText(
-            frame,
-            label_text,
-            (start_x + 5, bar_y + bar_height - 3),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.35,
-            (255, 255, 255),
-            1
-        )
-    
-    return frame
+        cv2.destroyAllWindows()
+        print("✅ Application closed")
 
 
 if __name__ == "__main__":
