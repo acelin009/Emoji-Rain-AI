@@ -82,31 +82,28 @@ class ExpressionThresholds:
     """
 
     # Eye Aspect Ratio (EAR). Lower value == more closed eye.
-    ear_closed_threshold: float = 0.21
-    ear_open_threshold: float = 0.24
-    ear_wink_difference: float = 0.06
+    ear_closed_threshold: float = 0.21  # was 0.19
+    ear_open_threshold: float = 0.24   # was 0.27
+    ear_wink_difference: float = 0.06  # was 0.10
 
     # Mouth Aspect Ratio (MAR) / mouth opening.
-    mouth_open_threshold: float = 0.16
-    # REMOVED: mouth_wide_open_threshold
+    mouth_open_threshold: float = 0.16      # was 0.35
+    mouth_wide_open_threshold: float = 0.26 # was 0.55
 
     # Smile intensity: normalized upward curvature of mouth corners.
-    smile_threshold: float = 0.045
-    big_smile_threshold: float = 0.09
-    frown_threshold: float = -0.035
+    smile_threshold: float = 0.045     # was 0.12
+    big_smile_threshold: float = 0.09  # was 0.24
+    frown_threshold: float = -0.035    # was -0.08
 
-    # Eyebrows: normalized distance between eyebrow and eye.
-    eyebrow_raise_threshold: float = 0.045
-    # REMOVED: eyebrow_lower_threshold
-
-    # NEW: Pucker/kiss detection
-    mouth_pucker_width_threshold: float = 0.30  # mouth width below this counts as puckered
-    mouth_pucker_max_open: float = 0.12        # mouth must stay mostly closed to count as a pout
+    # Eyebrows: normalized distance between eyebrow and eye (relative to
+    # a neutral baseline learned online per-user).
+    eyebrow_raise_threshold: float = 0.045  # was 0.08
+    eyebrow_lower_threshold: float = -0.03  # was -0.05
 
     # Teeth / tongue visibility heuristics.
-    teeth_visibility_mouth_open_min: float = 0.04  # was 0.05
-    teeth_visibility_brightness_min: float = 85.0  # was 100.0
-    teeth_visibility_bright_ratio_min: float = 0.05  # was 0.08
+    teeth_visibility_mouth_open_min: float = 0.05
+    teeth_visibility_brightness_min: float = 100.0
+    teeth_visibility_bright_ratio_min: float = 0.08
     tongue_visibility_mouth_open_min: float = 0.10
     tongue_pinkish_ratio_min: float = 0.15
     tongue_hue_min: int = 0
@@ -114,10 +111,10 @@ class ExpressionThresholds:
     tongue_saturation_min: int = 60
 
     # Temporal smoothing.
-    history_length: int = 8
-    min_stable_frames: int = 3
-    min_confidence_to_switch: float = 0.5
-    landmark_ema_alpha: float = 0.5
+    history_length: int = 8   # was 12
+    min_stable_frames: int = 3  # was 5
+    min_confidence_to_switch: float = 0.5  # was 0.55
+    landmark_ema_alpha: float = 0.5  # exponential smoothing of raw landmarks
 
 
 # --------------------------------------------------------------------------- #
@@ -134,36 +131,30 @@ class EmojiMappingConfig:
     mapping: Dict[str, str] = field(
         default_factory=lambda: {
             "NEUTRAL": "\U0001f610",  # 😐
-            "SMILE_EYES_OPEN": "\U0001f60a",  # 😊
-            "SMILE_EYES_CLOSED": "\U0001f60c",  # 😌
-            "BIG_SMILE_EYES_OPEN": "\U0001f601",  # 😁
-            "BIG_SMILE_EYES_CLOSED": "\U0001f606",  # 😆
+            "SMILE": "\U0001f60a",  # 😊
+            "BIG_SMILE": "\U0001f601",  # 😁
+            "LAUGH": "\U0001f602",  # 😂
             "WINK": "\U0001f609",  # 😉
             "TONGUE_WINK": "\U0001f61c",  # 😜
-            "TONGUE_OUT_EYES_OPEN": "\U0001f61b",  # 😛
-            "TONGUE_OUT_EYES_CLOSED": "\U0001f61d",  # 😝
+            "TONGUE_OUT": "\U0001f61b",  # 😛
             "SHOCKED": "\U0001f632",  # 😲
-            "SAD": "\U0001f61e",  # 😞  (was 😢 - removed tear drop)
-            "KISS_EYES_OPEN": "\U0001f617",  # 😗
-            "KISS_EYES_CLOSED": "\U0001f61a",  # 😚
+            "SAD": "\U0001f622",  # 😢
+            "ANGRY": "\U0001f620",  # 😠
         }
     )
 
     accent_colors: Dict[str, RGBColor] = field(
         default_factory=lambda: {
             "NEUTRAL": (170, 170, 180),
-            "SMILE_EYES_OPEN": (255, 209, 102),
-            "SMILE_EYES_CLOSED": (255, 190, 80),
-            "BIG_SMILE_EYES_OPEN": (255, 179, 71),
-            "BIG_SMILE_EYES_CLOSED": (255, 160, 60),
+            "SMILE": (255, 209, 102),
+            "BIG_SMILE": (255, 179, 71),
+            "LAUGH": (255, 138, 91),
             "WINK": (114, 214, 255),
             "TONGUE_WINK": (198, 130, 255),
-            "TONGUE_OUT_EYES_OPEN": (168, 230, 163),
-            "TONGUE_OUT_EYES_CLOSED": (140, 210, 135),
+            "TONGUE_OUT": (168, 230, 163),
             "SHOCKED": (255, 107, 129),
             "SAD": (108, 156, 255),
-            "KISS_EYES_OPEN": (255, 150, 200),
-            "KISS_EYES_CLOSED": (255, 130, 190),
+            "ANGRY": (255, 82, 82),
         }
     )
 
@@ -190,9 +181,9 @@ class ParticleConfig:
     min_lifetime: float = 3.2  # seconds
     max_lifetime: float = 5.5
     fade_in_duration: float = 0.15
-    fade_out_start_fraction: float = 0.75
+    fade_out_start_fraction: float = 0.75  # start fading in the final 25%
     base_font_size: int = 42
-    spawn_margin_px: int = 24
+    spawn_margin_px: int = 24  # keep spawns away from the very edges
 
 
 # --------------------------------------------------------------------------- #
@@ -220,7 +211,8 @@ class UIConfig:
     show_fps: bool = True
     show_landmark_overlay_hint: bool = True
     hud_top_left_margin: Tuple[int, int] = (24, 24)
-    hud_width: int = 340  # was 300 - longer names need more room
+    hud_width: int = 300
+    # New debug panel settings
     show_debug_features: bool = True
     debug_panel_width: int = 260
 

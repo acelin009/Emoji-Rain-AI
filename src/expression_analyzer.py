@@ -29,18 +29,15 @@ class Expression(str, Enum):
     """All expressions recognized by the engine."""
 
     NEUTRAL = "NEUTRAL"
-    SMILE_EYES_OPEN = "SMILE_EYES_OPEN"
-    SMILE_EYES_CLOSED = "SMILE_EYES_CLOSED"
-    BIG_SMILE_EYES_OPEN = "BIG_SMILE_EYES_OPEN"
-    BIG_SMILE_EYES_CLOSED = "BIG_SMILE_EYES_CLOSED"
+    SMILE = "SMILE"
+    BIG_SMILE = "BIG_SMILE"
+    LAUGH = "LAUGH"
     WINK = "WINK"
     TONGUE_WINK = "TONGUE_WINK"
-    TONGUE_OUT_EYES_OPEN = "TONGUE_OUT_EYES_OPEN"
-    TONGUE_OUT_EYES_CLOSED = "TONGUE_OUT_EYES_CLOSED"
+    TONGUE_OUT = "TONGUE_OUT"
     SHOCKED = "SHOCKED"
     SAD = "SAD"
-    KISS_EYES_OPEN = "KISS_EYES_OPEN"
-    KISS_EYES_CLOSED = "KISS_EYES_CLOSED"
+    ANGRY = "ANGRY"
 
 
 @dataclass
@@ -52,7 +49,6 @@ class FacialFeatures:
     ear_avg: float
     mar: float
     mouth_open: float
-    mouth_width: float  # NEW: normalized mouth width for pout detection
     smile: float
     eyebrow: float
     teeth_visible: bool
@@ -112,7 +108,7 @@ class ExpressionAnalyzer:
         self._current_expression = Expression.NEUTRAL
         self._current_confidence = 1.0
         self._stable_frame_count = 0
-        self._last_majority_expression = None
+        self._last_majority_expression = None  # Track previous majority vote
         self._smoothed_landmarks: Optional[np.ndarray] = None
 
     def analyze(
@@ -139,8 +135,9 @@ class ExpressionAnalyzer:
 
         self._history.push(candidate)
         majority = self._history.majority()
-        assert majority is not None
+        assert majority is not None  # history always has at least 1 item here
 
+        # FIXED: Compare against the previous majority vote, not the currently displayed expression
         if self._last_majority_expression is None:
             self._last_majority_expression = majority["expression"]
             self._stable_frame_count = 1
@@ -185,10 +182,6 @@ class ExpressionAnalyzer:
             self._smoothed_landmarks = self._smoothed_landmarks * (1.0 - alpha) + landmarks * alpha
         return self._smoothed_landmarks
 
-    def _eyes_closed(self, features: FacialFeatures) -> bool:
-        """Helper: returns True if both eyes are closed (EAR below threshold)."""
-        return features.ear_avg < self._thresholds.ear_closed_threshold
-
     def _extract_features(
         self,
         landmarks: np.ndarray,
@@ -202,10 +195,10 @@ class ExpressionAnalyzer:
         ear_right = geometry.eye_aspect_ratio(landmarks, geometry.RIGHT_EYE_EAR_POINTS)
         mar = geometry.mouth_aspect_ratio(landmarks)
         mouth_open = geometry.mouth_opening_normalized(landmarks)
-        mouth_width = geometry.mouth_width_normalized(landmarks)  # NEW
         smile = geometry.smile_intensity(landmarks)
         eyebrow = geometry.eyebrow_height(landmarks)
         
+        # Use config-driven parameters for teeth/tongue detection
         teeth_visible = geometry.teeth_visibility_estimate(
             frame_bgr, 
             landmarks, 
@@ -234,7 +227,6 @@ class ExpressionAnalyzer:
             ear_avg=(ear_left + ear_right) / 2.0,
             mar=mar,
             mouth_open=mouth_open,
-            mouth_width=mouth_width,  # NEW
             smile=smile,
             eyebrow=eyebrow,
             teeth_visible=teeth_visible,
@@ -263,14 +255,13 @@ class ExpressionAnalyzer:
                 return Expression.TONGUE_WINK
             return Expression.WINK
 
-        # 2. Kiss/pout: mouth width shrunk, mouth stays mostly closed.
+        # 2. Laugh: mouth wide open with eyes noticeably narrowed/closed.
         if (
-            features.mouth_width <= t.mouth_pucker_width_threshold
-            and features.mouth_open <= t.mouth_pucker_max_open
+            features.mouth_open >= t.mouth_wide_open_threshold
+            and features.ear_avg < t.ear_open_threshold
+            and features.smile > t.smile_threshold * 0.5
         ):
-            if self._eyes_closed(features):
-                return Expression.KISS_EYES_CLOSED
-            return Expression.KISS_EYES_OPEN
+            return Expression.LAUGH
 
         # 3. Shocked: mouth open + eyebrows raised (both eyes wide open too).
         if (
@@ -282,27 +273,28 @@ class ExpressionAnalyzer:
 
         # 4. Tongue out (no wink): mouth open + tongue detected.
         if features.tongue_visible and features.mouth_open >= t.mouth_open_threshold * 0.6:
-            if self._eyes_closed(features):
-                return Expression.TONGUE_OUT_EYES_CLOSED
-            return Expression.TONGUE_OUT_EYES_OPEN
+            return Expression.TONGUE_OUT
 
         # 5. Big smile: strong upward mouth curvature + visible teeth.
         if features.smile >= t.big_smile_threshold and features.teeth_visible:
-            if self._eyes_closed(features):
-                return Expression.BIG_SMILE_EYES_CLOSED
-            return Expression.BIG_SMILE_EYES_OPEN
+            return Expression.BIG_SMILE
 
         # 6. Regular smile.
         if features.smile >= t.smile_threshold:
-            if self._eyes_closed(features):
-                return Expression.SMILE_EYES_CLOSED
-            return Expression.SMILE_EYES_OPEN
+            return Expression.SMILE
 
-        # 7. Sad: mouth corners clearly drooping below neutral.
+        # 7. Angry: lowered/furrowed eyebrows with a flat or downturned mouth.
+        if (
+            features.eyebrow <= t.eyebrow_lower_threshold
+            and features.smile <= t.smile_threshold * 0.5
+        ):
+            return Expression.ANGRY
+
+        # 8. Sad: mouth corners clearly drooping below neutral.
         if features.smile <= t.frown_threshold:
             return Expression.SAD
 
-        # 8. Default: neutral face.
+        # 9. Default: neutral face.
         return Expression.NEUTRAL
 
     @property
