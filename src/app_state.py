@@ -16,6 +16,10 @@ from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.expression_analyzer import Expression, FacialFeatures
+else:
+    # Provide runtime fallback for type hints
+    Expression = str
+    FacialFeatures = object
 
 
 class CameraStatus(str, Enum):
@@ -50,7 +54,7 @@ class AppState:
     camera_status: CameraStatus = CameraStatus.INITIALIZING
     detection_status: DetectionStatus = DetectionStatus.SEARCHING
 
-    current_expression: Expression = Expression.NEUTRAL  # type: ignore
+    current_expression: str = "NEUTRAL"
     expression_confidence: float = 0.0
     landmark_count: int = 0
 
@@ -60,8 +64,8 @@ class AppState:
     last_error: Optional[str] = None
 
     # Debug fields
-    debug_features: Optional[FacialFeatures] = None
-    debug_raw_candidate: Optional[Expression] = None  # type: ignore
+    debug_features: Optional[FacialFeatures] = None  # type: ignore
+    debug_raw_candidate: Optional[str] = None
 
     def record_frame(self, fps: float) -> None:
         """Updates per-frame bookkeeping fields."""
@@ -73,7 +77,7 @@ class AppState:
         both rendering and testing."""
         return {
             "FPS": f"{self.fps:5.1f}",
-            "Expression": self.current_expression.value,
+            "Expression": self.current_expression,
             "Confidence": f"{self.expression_confidence * 100:5.1f}%",
             "Particles": str(self.particle_count),
             "Landmarks": str(self.landmark_count),
