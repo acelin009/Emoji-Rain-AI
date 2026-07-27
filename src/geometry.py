@@ -39,11 +39,10 @@ RIGHT_EYEBROW_POINTS: Tuple[int, ...] = (300, 293, 334, 296, 336)
 LEFT_EYE_TOP: int = 159
 RIGHT_EYE_TOP: int = 386
 
-# FIXED: 13/14 are the inner lip seam, not the outer lip.
-MOUTH_TOP_OUTER: int = 0       # was 13 - now uses the top outer lip center
-MOUTH_BOTTOM_OUTER: int = 17   # was 14 - now uses the bottom outer lip center
-MOUTH_TOP_INNER: int = 13      # was 12 - now uses the actual inner top
-MOUTH_BOTTOM_INNER: int = 14   # was 15 - now uses the actual inner bottom
+MOUTH_TOP_OUTER: int = 0
+MOUTH_BOTTOM_OUTER: int = 17
+MOUTH_TOP_INNER: int = 13
+MOUTH_BOTTOM_INNER: int = 14
 
 MOUTH_LEFT_CORNER: int = 61
 MOUTH_RIGHT_CORNER: int = 291
@@ -139,6 +138,17 @@ def mouth_opening_normalized(landmarks: np.ndarray) -> float:
     camera distance."""
     vertical = _distance(landmarks, MOUTH_TOP_INNER, MOUTH_BOTTOM_INNER)
     return vertical / face_scale(landmarks)
+
+
+def mouth_width_normalized(landmarks: np.ndarray) -> float:
+    """Mouth width (distance between corners) normalized by face height.
+    
+    This is the key signal for detecting a pout/kiss: when lips purse
+    forward, the mouth width shrinks significantly compared to a normal
+    relaxed closed mouth.
+    """
+    width = _distance(landmarks, MOUTH_LEFT_CORNER, MOUTH_RIGHT_CORNER)
+    return width / face_scale(landmarks)
 
 
 def smile_intensity(landmarks: np.ndarray) -> float:

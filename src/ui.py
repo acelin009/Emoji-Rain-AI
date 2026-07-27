@@ -95,6 +95,7 @@ class UIOverlay:
                 ("EAR AVG", f"{f.ear_avg:.3f}", self._config.text_color_primary),
                 ("MAR", f"{f.mar:.3f}", self._config.text_color_primary),
                 ("MOUTH OPEN", f"{f.mouth_open:.3f}", self._config.text_color_primary),
+                ("MOUTH WIDTH", f"{f.mouth_width:.3f}", self._config.text_color_primary),  # NEW
                 ("SMILE", f"{f.smile:.3f}", self._config.accent_color if f.smile > 0.04 else self._config.text_color_secondary),
                 ("EYEBROW", f"{f.eyebrow:.3f}", self._config.text_color_primary),
                 ("TEETH", f"{'YES' if f.teeth_visible else 'NO'}", self._config.success_color if f.teeth_visible else self._config.text_color_secondary),
