@@ -12,6 +12,7 @@ Controls:
     q / ESC   Quit the application.
     l         Toggle raw landmark dot overlay (debug aid).
     h         Toggle the HUD stats panel.
+    d         Toggle the debug features panel.
 
 See README.md for full installation and usage instructions.
 """
@@ -63,6 +64,7 @@ class EmojiRainApp:
 
         self._show_hud = True
         self._show_landmarks = False
+        self._show_debug_panel = True  # Default to True for visibility
         self._running = False
 
     def run(self) -> int:
@@ -123,12 +125,17 @@ class EmojiRainApp:
             )
             self.state.current_expression = result.expression
             self.state.expression_confidence = result.confidence
+            # Store debug data
+            self.state.debug_features = result.features
+            self.state.debug_raw_candidate = result.raw_candidate
 
             style = self.emoji_engine.update(result.expression)
             self.particle_system.set_spawn_enabled(True)
         else:
             self.state.detection_status = DetectionStatus.FACE_LOST
             self.state.landmark_count = 0
+            self.state.debug_features = None
+            self.state.debug_raw_candidate = None
             # No face: stop spawning new particles, but let existing ones
             # finish their natural fade-out/float-away animation.
             self.particle_system.set_spawn_enabled(False)
@@ -142,6 +149,8 @@ class EmojiRainApp:
         self.renderer.draw_particles(canvas, self.particle_system.particles)
         if self._show_hud:
             self.ui_overlay.draw(canvas, self.state, style)
+        if self._show_debug_panel:
+            self.ui_overlay.draw_debug_panel(canvas, self.state)
         output_frame = self.renderer.finish_frame(canvas)
 
         current_fps = self.fps_counter.tick()
@@ -161,6 +170,9 @@ class EmojiRainApp:
         elif key == ord("l"):
             self._show_landmarks = not self._show_landmarks
             logger.debug("Landmark overlay toggled: %s", self._show_landmarks)
+        elif key == ord("d"):
+            self._show_debug_panel = not self._show_debug_panel
+            logger.debug("Debug panel toggled: %s", self._show_debug_panel)
 
     def _shutdown(self) -> None:
         logger.info(

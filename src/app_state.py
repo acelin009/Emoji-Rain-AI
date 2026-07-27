@@ -12,9 +12,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from src.expression_analyzer import Expression
+if TYPE_CHECKING:
+    from src.expression_analyzer import Expression, FacialFeatures
 
 
 class CameraStatus(str, Enum):
@@ -49,7 +50,7 @@ class AppState:
     camera_status: CameraStatus = CameraStatus.INITIALIZING
     detection_status: DetectionStatus = DetectionStatus.SEARCHING
 
-    current_expression: Expression = Expression.NEUTRAL
+    current_expression: Expression = Expression.NEUTRAL  # type: ignore
     expression_confidence: float = 0.0
     landmark_count: int = 0
 
@@ -57,6 +58,10 @@ class AppState:
     total_particles_spawned: int = 0
 
     last_error: Optional[str] = None
+
+    # Debug fields
+    debug_features: Optional[FacialFeatures] = None
+    debug_raw_candidate: Optional[Expression] = None  # type: ignore
 
     def record_frame(self, fps: float) -> None:
         """Updates per-frame bookkeeping fields."""

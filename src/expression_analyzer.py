@@ -143,7 +143,7 @@ class ExpressionAnalyzer:
 
         should_switch = (
             majority["expression"] != self._current_expression
-            and self._stable_frame_count >= 1
+            and self._stable_frame_count >= self._thresholds.min_stable_frames
             and majority["confidence"] >= self._thresholds.min_confidence_to_switch
         )
         if should_switch:
@@ -183,23 +183,35 @@ class ExpressionAnalyzer:
         frame_width: int,
         frame_height: int,
     ) -> FacialFeatures:
+        t = self._thresholds
+        
         ear_left = geometry.eye_aspect_ratio(landmarks, geometry.LEFT_EYE_EAR_POINTS)
         ear_right = geometry.eye_aspect_ratio(landmarks, geometry.RIGHT_EYE_EAR_POINTS)
         mar = geometry.mouth_aspect_ratio(landmarks)
         mouth_open = geometry.mouth_opening_normalized(landmarks)
         smile = geometry.smile_intensity(landmarks)
         eyebrow = geometry.eyebrow_height(landmarks)
+        
+        # Use config-driven parameters for teeth/tongue detection
         teeth_visible = geometry.teeth_visibility_estimate(
-            frame_bgr, landmarks, frame_width, frame_height
+            frame_bgr, 
+            landmarks, 
+            frame_width, 
+            frame_height,
+            min_mouth_open=t.teeth_visibility_mouth_open_min,
+            brightness_threshold=t.teeth_visibility_brightness_min,
+            bright_pixel_ratio_threshold=t.teeth_visibility_bright_ratio_min,
         )
         tongue_visible = geometry.tongue_visibility_estimate(
             frame_bgr,
             landmarks,
             frame_width,
             frame_height,
-            hue_min=self._thresholds.tongue_hue_min,
-            hue_max=self._thresholds.tongue_hue_max,
-            saturation_min=self._thresholds.tongue_saturation_min,
+            min_mouth_open=t.tongue_visibility_mouth_open_min,
+            pinkish_ratio_threshold=t.tongue_pinkish_ratio_min,
+            hue_min=t.tongue_hue_min,
+            hue_max=t.tongue_hue_max,
+            saturation_min=t.tongue_saturation_min,
         )
         head_pose = geometry.estimate_head_pose(landmarks, frame_width, frame_height)
 

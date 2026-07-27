@@ -82,34 +82,38 @@ class ExpressionThresholds:
     """
 
     # Eye Aspect Ratio (EAR). Lower value == more closed eye.
-    ear_closed_threshold: float = 0.19
-    ear_open_threshold: float = 0.27
-    ear_wink_difference: float = 0.10  # min |EAR_L - EAR_R| to call it a wink
+    ear_closed_threshold: float = 0.21  # was 0.19
+    ear_open_threshold: float = 0.24   # was 0.27
+    ear_wink_difference: float = 0.06  # was 0.10
 
     # Mouth Aspect Ratio (MAR) / mouth opening.
-    mouth_open_threshold: float = 0.35
-    mouth_wide_open_threshold: float = 0.55
+    mouth_open_threshold: float = 0.16      # was 0.35
+    mouth_wide_open_threshold: float = 0.26 # was 0.55
 
     # Smile intensity: normalized upward curvature of mouth corners.
-    smile_threshold: float = 0.045
-    big_smile_threshold: float = 0.09
-    frown_threshold: float = -0.035
+    smile_threshold: float = 0.045     # was 0.12
+    big_smile_threshold: float = 0.09  # was 0.24
+    frown_threshold: float = -0.035    # was -0.08
 
     # Eyebrows: normalized distance between eyebrow and eye (relative to
     # a neutral baseline learned online per-user).
-    eyebrow_raise_threshold: float = 0.08
-    eyebrow_lower_threshold: float = -0.05
+    eyebrow_raise_threshold: float = 0.045  # was 0.08
+    eyebrow_lower_threshold: float = -0.03  # was -0.05
 
     # Teeth / tongue visibility heuristics.
-    teeth_visibility_mouth_open_min: float = 0.30
+    teeth_visibility_mouth_open_min: float = 0.05
+    teeth_visibility_brightness_min: float = 100.0
+    teeth_visibility_bright_ratio_min: float = 0.08
+    tongue_visibility_mouth_open_min: float = 0.10
+    tongue_pinkish_ratio_min: float = 0.15
     tongue_hue_min: int = 0
     tongue_hue_max: int = 12
     tongue_saturation_min: int = 60
 
     # Temporal smoothing.
-    history_length: int = 12
-    min_stable_frames: int = 5
-    min_confidence_to_switch: float = 0.55
+    history_length: int = 8   # was 12
+    min_stable_frames: int = 3  # was 5
+    min_confidence_to_switch: float = 0.5  # was 0.55
     landmark_ema_alpha: float = 0.5  # exponential smoothing of raw landmarks
 
 
@@ -208,6 +212,9 @@ class UIConfig:
     show_landmark_overlay_hint: bool = True
     hud_top_left_margin: Tuple[int, int] = (24, 24)
     hud_width: int = 300
+    # New debug panel settings
+    show_debug_features: bool = True
+    debug_panel_width: int = 260
 
 
 # --------------------------------------------------------------------------- #

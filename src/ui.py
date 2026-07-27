@@ -77,6 +77,74 @@ class UIOverlay:
             )
             cursor_y += row_height
 
+    def draw_debug_panel(self, canvas: Image.Image, state: AppState) -> None:
+        """Draws the debug feature panel with raw geometric values."""
+        if not self._config.show_debug_features:
+            return
+
+        margin_x, margin_y = self._config.hud_top_left_margin
+        panel_x = margin_x + self._config.hud_width + 20
+        width = self._config.debug_panel_width
+
+        if state.debug_features is None:
+            rows = [("No face detected", "", self._config.danger_color)]
+        else:
+            f = state.debug_features
+            rows = [
+                ("EAR L/R", f"{f.ear_left:.3f} / {f.ear_right:.3f}", self._config.text_color_primary),
+                ("EAR AVG", f"{f.ear_avg:.3f}", self._config.text_color_primary),
+                ("MAR", f"{f.mar:.3f}", self._config.text_color_primary),
+                ("MOUTH OPEN", f"{f.mouth_open:.3f}", self._config.text_color_primary),
+                ("SMILE", f"{f.smile:.3f}", self._config.accent_color if f.smile > 0.04 else self._config.text_color_secondary),
+                ("EYEBROW", f"{f.eyebrow:.3f}", self._config.text_color_primary),
+                ("TEETH", f"{'YES' if f.teeth_visible else 'NO'}", self._config.success_color if f.teeth_visible else self._config.text_color_secondary),
+                ("TONGUE", f"{'YES' if f.tongue_visible else 'NO'}", self._config.success_color if f.tongue_visible else self._config.text_color_secondary),
+            ]
+
+        if state.debug_raw_candidate is not None:
+            rows.append(("RAW CANDIDATE", state.debug_raw_candidate.value, self._config.accent_color))
+
+        row_height = self._config.font_size_body + 8
+        header_height = self._config.font_size_title + 22
+        height = header_height + row_height * len(rows) + self._config.panel_padding
+
+        self._renderer.draw_glass_panel(canvas, (panel_x, margin_y), (width, height))
+
+        pad = self._config.panel_padding
+        cursor_y = margin_y + pad
+
+        self._renderer.draw_text(
+            canvas,
+            (panel_x + pad, cursor_y),
+            "FEATURES",
+            size=self._config.font_size_title,
+            color=self._config.accent_color,
+            bold=True,
+        )
+        cursor_y += header_height
+
+        for label, value, color in rows:
+            self._renderer.draw_text(
+                canvas,
+                (panel_x + pad, cursor_y),
+                label,
+                size=self._config.font_size_small,
+                color=self._config.text_color_secondary,
+            )
+            value_width, _ = self._renderer.measure_text(
+                value, size=self._config.font_size_body, bold=True
+            )
+            value_x = panel_x + width - pad - value_width
+            self._renderer.draw_text(
+                canvas,
+                (value_x, cursor_y - 2),
+                value,
+                size=self._config.font_size_body,
+                color=color,
+                bold=True,
+            )
+            cursor_y += row_height
+
     def _build_rows(self, state: AppState):
         cfg = self._config
         rows = []

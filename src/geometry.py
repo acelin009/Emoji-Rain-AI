@@ -39,12 +39,14 @@ RIGHT_EYEBROW_POINTS: Tuple[int, ...] = (300, 293, 334, 296, 336)
 LEFT_EYE_TOP: int = 159
 RIGHT_EYE_TOP: int = 386
 
+# FIXED: 13/14 are the inner lip seam, not the outer lip.
+MOUTH_TOP_OUTER: int = 0       # was 13 - now uses the top outer lip center
+MOUTH_BOTTOM_OUTER: int = 17   # was 14 - now uses the bottom outer lip center
+MOUTH_TOP_INNER: int = 13      # was 12 - now uses the actual inner top
+MOUTH_BOTTOM_INNER: int = 14   # was 15 - now uses the actual inner bottom
+
 MOUTH_LEFT_CORNER: int = 61
 MOUTH_RIGHT_CORNER: int = 291
-MOUTH_TOP_OUTER: int = 0
-MOUTH_BOTTOM_OUTER: int = 17
-MOUTH_TOP_INNER: int = 13
-MOUTH_BOTTOM_INNER: int = 14
 
 FOREHEAD_TOP: int = 10
 CHIN_BOTTOM: int = 152
@@ -258,17 +260,30 @@ def teeth_visibility_estimate(
     landmarks: np.ndarray,
     frame_width: int,
     frame_height: int,
+    min_mouth_open: float = 0.05,
+    brightness_threshold: float = 100.0,
+    bright_pixel_ratio_threshold: float = 0.08,
 ) -> bool:
     """Best-effort teeth visibility heuristic: when the mouth is
     sufficiently open, sample the mean brightness inside the mouth region.
     Teeth are usually noticeably brighter than the surrounding lips/tongue.
 
-    Returns ``False`` (rather than raising) if the frame is unavailable or
-    the mouth region cannot be sampled.
+    Args:
+        frame_bgr: Source BGR frame for color sampling.
+        landmarks: Face mesh landmarks.
+        frame_width: Width of the source frame.
+        frame_height: Height of the source frame.
+        min_mouth_open: Minimum normalized mouth opening to attempt detection.
+        brightness_threshold: Minimum mean brightness to consider teeth visible.
+        bright_pixel_ratio_threshold: Minimum ratio of bright pixels (>150).
+
+    Returns:
+        ``False`` if the frame is unavailable or the mouth region cannot
+        be sampled.
     """
     if frame_bgr is None or cv2 is None:
         return False
-    if mouth_opening_normalized(landmarks) < 0.12:
+    if mouth_opening_normalized(landmarks) < min_mouth_open:
         return False
 
     roi = _mouth_roi(frame_bgr, landmarks, frame_width, frame_height)
@@ -278,7 +293,7 @@ def teeth_visibility_estimate(
     gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     brightness = float(np.mean(gray))
     bright_pixel_ratio = float(np.mean(gray > 150))
-    return brightness > 120.0 and bright_pixel_ratio > 0.12
+    return brightness > brightness_threshold and bright_pixel_ratio > bright_pixel_ratio_threshold
 
 
 def tongue_visibility_estimate(
@@ -286,6 +301,8 @@ def tongue_visibility_estimate(
     landmarks: np.ndarray,
     frame_width: int,
     frame_height: int,
+    min_mouth_open: float = 0.10,
+    pinkish_ratio_threshold: float = 0.15,
     hue_min: int = 0,
     hue_max: int = 12,
     saturation_min: int = 60,
@@ -294,10 +311,21 @@ def tongue_visibility_estimate(
     inside the mouth region: the tongue tends to be more saturated and
     reddish/pink compared to teeth (bright, low-saturation) or the dark
     interior of an open mouth.
+
+    Args:
+        frame_bgr: Source BGR frame for color sampling.
+        landmarks: Face mesh landmarks.
+        frame_width: Width of the source frame.
+        frame_height: Height of the source frame.
+        min_mouth_open: Minimum normalized mouth opening to attempt detection.
+        pinkish_ratio_threshold: Minimum ratio of pinkish pixels.
+        hue_min: Minimum hue for pink/red detection.
+        hue_max: Maximum hue for pink/red detection.
+        saturation_min: Minimum saturation for pink/red detection.
     """
     if frame_bgr is None or cv2 is None:
         return False
-    if mouth_opening_normalized(landmarks) < 0.22:
+    if mouth_opening_normalized(landmarks) < min_mouth_open:
         return False
 
     roi = _mouth_roi(frame_bgr, landmarks, frame_width, frame_height)
@@ -308,7 +336,7 @@ def tongue_visibility_estimate(
     hue, saturation, _value = cv2.split(hsv)
     mask = (hue >= hue_min) & (hue <= hue_max) & (saturation >= saturation_min)
     pinkish_ratio = float(np.mean(mask))
-    return pinkish_ratio > 0.15
+    return pinkish_ratio > pinkish_ratio_threshold
 
 
 def _mouth_roi(
