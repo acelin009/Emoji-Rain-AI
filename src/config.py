@@ -83,17 +83,17 @@ class ExpressionThresholds:
 
     # Eye Aspect Ratio (EAR). Lower value == more closed eye.
     ear_closed_threshold: float = 0.21  # was 0.19
-    ear_open_threshold: float = 0.24   # was 0.27
+    ear_open_threshold: float = 0.24  # was 0.27
     ear_wink_difference: float = 0.06  # was 0.10
 
     # Mouth Aspect Ratio (MAR) / mouth opening.
-    mouth_open_threshold: float = 0.16      # was 0.35
-    mouth_wide_open_threshold: float = 0.26 # was 0.55
+    mouth_open_threshold: float = 0.16  # was 0.35
+    mouth_wide_open_threshold: float = 0.26  # was 0.55
 
     # Smile intensity: normalized upward curvature of mouth corners.
-    smile_threshold: float = 0.045     # was 0.12
+    smile_threshold: float = 0.045  # was 0.12
     big_smile_threshold: float = 0.09  # was 0.24
-    frown_threshold: float = -0.035    # was -0.08
+    frown_threshold: float = -0.035  # was -0.08
 
     # Eyebrows: normalized distance between eyebrow and eye (relative to
     # a neutral baseline learned online per-user).
@@ -111,7 +111,7 @@ class ExpressionThresholds:
     tongue_saturation_min: int = 60
 
     # Temporal smoothing.
-    history_length: int = 8   # was 12
+    history_length: int = 8  # was 12
     min_stable_frames: int = 3  # was 5
     min_confidence_to_switch: float = 0.5  # was 0.55
     landmark_ema_alpha: float = 0.5  # exponential smoothing of raw landmarks

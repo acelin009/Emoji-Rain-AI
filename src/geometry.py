@@ -40,10 +40,10 @@ LEFT_EYE_TOP: int = 159
 RIGHT_EYE_TOP: int = 386
 
 # FIXED: 13/14 are the inner lip seam, not the outer lip.
-MOUTH_TOP_OUTER: int = 0       # was 13 - now uses the top outer lip center
-MOUTH_BOTTOM_OUTER: int = 17   # was 14 - now uses the bottom outer lip center
-MOUTH_TOP_INNER: int = 13      # was 12 - now uses the actual inner top
-MOUTH_BOTTOM_INNER: int = 14   # was 15 - now uses the actual inner bottom
+MOUTH_TOP_OUTER: int = 0  # was 13 - now uses the top outer lip center
+MOUTH_BOTTOM_OUTER: int = 17  # was 14 - now uses the bottom outer lip center
+MOUTH_TOP_INNER: int = 13  # was 12 - now uses the actual inner top
+MOUTH_BOTTOM_INNER: int = 14  # was 15 - now uses the actual inner bottom
 
 MOUTH_LEFT_CORNER: int = 61
 MOUTH_RIGHT_CORNER: int = 291

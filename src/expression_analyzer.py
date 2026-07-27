@@ -190,19 +190,19 @@ class ExpressionAnalyzer:
         frame_height: int,
     ) -> FacialFeatures:
         t = self._thresholds
-        
+
         ear_left = geometry.eye_aspect_ratio(landmarks, geometry.LEFT_EYE_EAR_POINTS)
         ear_right = geometry.eye_aspect_ratio(landmarks, geometry.RIGHT_EYE_EAR_POINTS)
         mar = geometry.mouth_aspect_ratio(landmarks)
         mouth_open = geometry.mouth_opening_normalized(landmarks)
         smile = geometry.smile_intensity(landmarks)
         eyebrow = geometry.eyebrow_height(landmarks)
-        
+
         # Use config-driven parameters for teeth/tongue detection
         teeth_visible = geometry.teeth_visibility_estimate(
-            frame_bgr, 
-            landmarks, 
-            frame_width, 
+            frame_bgr,
+            landmarks,
+            frame_width,
             frame_height,
             min_mouth_open=t.teeth_visibility_mouth_open_min,
             brightness_threshold=t.teeth_visibility_brightness_min,

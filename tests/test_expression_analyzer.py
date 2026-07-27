@@ -1,9 +1,9 @@
 """Tests for expression analyzer logic."""
 
-import pytest
 import numpy as np
-from src.expression_analyzer import ExpressionAnalyzer, Expression
+import pytest
 from src.config import ExpressionThresholds
+from src.expression_analyzer import Expression, ExpressionAnalyzer
 
 
 class TestExpressionAnalyzer:
@@ -40,11 +40,12 @@ class TestExpressionAnalyzer:
 
     def test_expression_switches_after_stable_frames(self, analyzer, mock_landmarks):
         """Test that expression switches after enough stable frames.
-        
+
         This is a regression test for the bug where stable_frame_count
         was compared against _current_expression instead of the previous
         majority vote, preventing expressions from ever switching.
         """
+
         # Mock features for SMILE
         class MockFeatures:
             ear_left = 0.25
@@ -62,25 +63,21 @@ class TestExpressionAnalyzer:
 
         # Monkey-patch _extract_features to return SMILE features
         original_extract = analyzer._extract_features
-        
+
         def mock_extract(*args, **kwargs):
             return MockFeatures()
-        
+
         analyzer._extract_features = mock_extract
 
         # Simulate 20 frames of SMILE
         for i in range(20):
-            result = analyzer.analyze(
-                mock_landmarks,
-                None,
-                640,
-                480
-            )
-            
+            result = analyzer.analyze(mock_landmarks, None, 640, 480)
+
             # After min_stable_frames (3), expression should switch to SMILE
             if i >= 3:
-                assert result.expression == Expression.SMILE, \
-                    f"Frame {i}: expression should be SMILE, got {result.expression}"
-        
+                assert (
+                    result.expression == Expression.SMILE
+                ), f"Frame {i}: expression should be SMILE, got {result.expression}"
+
         # Restore original method
         analyzer._extract_features = original_extract
