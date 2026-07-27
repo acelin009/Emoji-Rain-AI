@@ -108,6 +108,7 @@ class ExpressionAnalyzer:
         self._current_expression = Expression.NEUTRAL
         self._current_confidence = 1.0
         self._stable_frame_count = 0
+        self._last_majority_expression = None  # Track previous majority vote
         self._smoothed_landmarks: Optional[np.ndarray] = None
 
     def analyze(
@@ -136,10 +137,15 @@ class ExpressionAnalyzer:
         majority = self._history.majority()
         assert majority is not None  # history always has at least 1 item here
 
-        if majority["expression"] == self._current_expression:
+        # FIXED: Compare against the previous majority vote, not the currently displayed expression
+        if self._last_majority_expression is None:
+            self._last_majority_expression = majority["expression"]
+            self._stable_frame_count = 1
+        elif majority["expression"] == self._last_majority_expression:
             self._stable_frame_count += 1
         else:
             self._stable_frame_count = 1
+            self._last_majority_expression = majority["expression"]
 
         should_switch = (
             majority["expression"] != self._current_expression
@@ -302,4 +308,5 @@ class ExpressionAnalyzer:
         self._current_expression = Expression.NEUTRAL
         self._current_confidence = 1.0
         self._stable_frame_count = 0
+        self._last_majority_expression = None
         self._smoothed_landmarks = None
