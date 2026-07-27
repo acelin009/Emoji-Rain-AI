@@ -102,24 +102,30 @@ class UIOverlay:
                 (
                     "SMILE",
                     f"{f.smile:.3f}",
-                    self._config.accent_color
-                    if f.smile > 0.04
-                    else self._config.text_color_secondary,
+                    (
+                        self._config.accent_color
+                        if f.smile > 0.04
+                        else self._config.text_color_secondary
+                    ),
                 ),
                 ("EYEBROW", f"{f.eyebrow:.3f}", self._config.text_color_primary),
                 (
                     "TEETH",
                     f"{'YES' if f.teeth_visible else 'NO'}",
-                    self._config.success_color
-                    if f.teeth_visible
-                    else self._config.text_color_secondary,
+                    (
+                        self._config.success_color
+                        if f.teeth_visible
+                        else self._config.text_color_secondary
+                    ),
                 ),
                 (
                     "TONGUE",
                     f"{'YES' if f.tongue_visible else 'NO'}",
-                    self._config.success_color
-                    if f.tongue_visible
-                    else self._config.text_color_secondary,
+                    (
+                        self._config.success_color
+                        if f.tongue_visible
+                        else self._config.text_color_secondary
+                    ),
                 ),
             ]
 
