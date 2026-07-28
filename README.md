@@ -121,3 +121,23 @@ pytest --cov=src --cov-report=term-missing
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+<div align="center">
+
+## 👨‍💻 Author
+
+### **Acelin Nazareth**
+
+AI & Data Science Engineer • Computer Vision • Machine Learning • Data Science
+
+📧 **acelin.nazareth@gmail.com**
+
+🐙 **GitHub:** https://github.com/acelin009
+
+💼 **LinkedIn:** https://www.linkedin.com/in/acelin-nazareth-a7666a281/
+
+⭐ If you enjoyed this project, consider giving it a star!
+
+</div>
