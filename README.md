@@ -20,7 +20,7 @@ python app.py
 ## Installation
 
 ```bash
-git clone https://github.com/your-org/Emoji-Rain-AI.git
+git clone https://github.com/acelin009/Emoji-Rain-AI.git
 cd Emoji-Rain-AI
 
 python -m venv .venv
