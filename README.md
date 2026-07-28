@@ -1,4 +1,4 @@
-# Emoji Rain AI
+# 😊 Emoji Rain AI
 
 A real-time webcam app that detects your facial expression using MediaPipe Face Mesh and rains the matching emoji up the screen. No pretrained emotion classifier — expressions are computed from actual facial geometry (eye aspect ratio, mouth curvature, eyebrow height) using explicit, tunable rules.
 
